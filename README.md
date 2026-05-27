@@ -1,6 +1,6 @@
 Face2FameAI
 A web where you can discover movies based on your celebrity lookalike
-Face2FameAI 🎭
+Face2FameAI 
 
 An AI-powered celebrity lookalike web application built using React, Flask, and DeepFace.
 
