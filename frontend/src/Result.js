@@ -14,10 +14,6 @@ export default function Result() {
 
   const movies = data.movies || [];
 
-  const similarity = Math.max(
-    0,
-    (100 - data.distance * 10).toFixed(0)
-  );
 
   return (
 
