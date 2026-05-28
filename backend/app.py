@@ -1,6 +1,5 @@
 from flask import Flask, request, jsonify, send_from_directory
 from flask_cors import CORS
-from deepface import DeepFace
 import numpy as np
 import pickle
 import os
@@ -441,6 +440,8 @@ def get_actor_image(filename):
 
 @app.route("/upload", methods=["POST"])
 def upload():
+
+    from deepface import DeepFace
 
     image_file = request.files["image"]
 
