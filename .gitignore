@@ -29,6 +29,12 @@ __pycache__/
 embeddings.pkl
 
 .venv
-frontend/build
-frontend/node_modules
 backend/.venv
+backend/uploads
+frontend/node_modules
+frontend/build
+
+backend/.venv/
+backend/uploads/
+frontend/node_modules/
+frontend/build/
