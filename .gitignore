@@ -27,3 +27,8 @@ node_modules/
 uploads/
 __pycache__/
 embeddings.pkl
+
+.venv
+frontend/build
+frontend/node_modules
+backend/.venv
