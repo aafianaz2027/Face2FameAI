@@ -426,6 +426,9 @@ movies_data = {
 with open("embeddings.pkl", "rb") as f:
     actor_embeddings = pickle.load(f)
 
+@app.route("/")
+def home():
+    return "Face2FameAI Backend Running"
 
 @app.route("/actors/<filename>")
 def get_actor_image(filename):
@@ -481,9 +484,6 @@ def upload():
     "celebrity_image": f"http://localhost:5000/actors/{best_match}.jfif",
     "movies": movies_data.get(best_match, [])
 })
-
-
-import os
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5000))
