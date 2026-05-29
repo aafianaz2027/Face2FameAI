@@ -446,14 +446,14 @@ def get_actor_image(filename):
 @app.route("/upload", methods=["POST"])
 def upload():
 
-    image_file = request.files["image"]
+    file = request.files["image"]
 
     image_path = os.path.join(
         UPLOAD_FOLDER,
-        image_file.filename
+        file.filename
     )
 
-    image_file.save(image_path)
+    file.save(image_path)
 
     user_embedding = DeepFace.represent(
         img_path=image_path,
