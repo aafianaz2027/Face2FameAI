@@ -1,5 +1,6 @@
 from flask import Flask, request, jsonify, send_from_directory
 from flask_cors import CORS
+from deepface import DeepFace
 import numpy as np
 import pickle
 import os
@@ -429,6 +430,8 @@ EMBEDDINGS_PATH = os.path.join(BASE_DIR, "embeddings.pkl")
 with open(EMBEDDINGS_PATH, "rb") as f:
     actor_embeddings = pickle.load(f)
 
+DeepFace.build_model("Facenet")
+
 @app.route("/")
 def home():
     return "Face2FameAI Backend Running"
@@ -444,8 +447,6 @@ def get_actor_image(filename):
 
 @app.route("/upload", methods=["POST"])
 def upload():
-
-    from deepface import DeepFace
 
     image_file = request.files["image"]
 
@@ -486,7 +487,7 @@ def upload():
     return jsonify({
     "match": best_match,
     "distance": float(best_distance),
-    "celebrity_image": f"http://localhost:5000/actors/{best_match}.jfif",
+    "celebrity_image": f"{request.host_url}actors/{best_match}.jfif",
     "movies": movies_data.get(best_match, [])
 })
 
