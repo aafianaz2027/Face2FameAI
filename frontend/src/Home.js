@@ -28,7 +28,7 @@ export default function Home() {
       try {
 
         const response = await fetch(
-          "https://face2fameai.onrender.com/upload",
+          "https://face2fameai.onrender.com",
           {
             method: "POST",
             body: formData
