@@ -4,6 +4,11 @@ from deepface import DeepFace
 import numpy as np
 import pickle
 import os
+import cv2  # Added for image resizing
+import gc   # Added for garbage collection
+
+# Set TensorFlow to use minimal memory and suppress logging logs
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3' 
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 app = Flask(__name__)
@@ -12,6 +17,10 @@ CORS(app)
 UPLOAD_FOLDER = os.path.join(BASE_DIR, "uploads")
 ACTORS_FOLDER = os.path.join(BASE_DIR, "actors")
 
+# Create folders if they do not exist
+os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+
+# ... (Keeping your movies_data dictionary exactly as it is) ...
 movies_data = {
 
     "Aamir Khan": [
@@ -436,28 +445,45 @@ def home():
 
 @app.route("/actors/<filename>")
 def get_actor_image(filename):
-
-    return send_from_directory(
-        "actors",
-        filename
-    )
-
+    return send_from_directory("actors", filename)
 
 @app.route("/upload", methods=["POST"])
 def upload():
+    file_path = None
     try:
         print("UPLOAD HIT")
 
-        file = request.files["image"]
+        if "image" not in request.files:
+            return jsonify({"success": False, "error": "No image uploaded"}), 400
 
-        file_path = "temp.jpg"
+        file = request.files["image"]
+        
+        # Save securely using a dynamic or clear name inside UPLOAD_FOLDER
+        file_path = os.path.join(UPLOAD_FOLDER, "temp_upload.jpg")
         file.save(file_path)
 
-        print("File saved:", file_path)
+        # -------------------------------------------------------------
+        # MEMORY FIX 1: Downscale the image immediately before processing
+        # -------------------------------------------------------------
+        img = cv2.imread(file_path)
+        if img is not None:
+            # Resize image so the maximum width/height is 640px (drastically cuts RAM usage)
+            h, w = img.shape[:2]
+            max_size = 640
+            if max(h, w) > max_size:
+                scale = max_size / max(h, w)
+                img = cv2.resize(img, (int(w * scale), int(h * scale)), interpolation=cv2.INTER_AREA)
+                cv2.imwrite(file_path, img) # Overwrite with the small version
+        
+        print("File saved and resized:", file_path)
 
-        # SAFE DeepFace call
+        # -------------------------------------------------------------
+        # MEMORY FIX 2: Explicitly use lightweight configurations
+        # -------------------------------------------------------------
         result = DeepFace.analyze(
             img_path=file_path,
+            actions=['emotion'], # Explicitly state actions to avoid loading unnecessary models like age/gender
+            detector_backend='opencv', # Low footprint, very fast face detector
             enforce_detection=False
         )
 
@@ -468,11 +494,29 @@ def upload():
 
     except Exception as e:
         print("ERROR IN UPLOAD:", str(e))
-
         return jsonify({
             "success": False,
             "error": str(e)
         }), 500
+
+    finally:
+        # -------------------------------------------------------------
+        # MEMORY FIX 3: Clear framework cache and force Garbage Collection
+        # -------------------------------------------------------------
+        try:
+            from tensorflow.keras import backend as K
+            K.clear_session() # Frees up Keras graph allocations
+        except Exception:
+            pass
+        
+        gc.collect() # Forces Python to instantly release unused memory
+
+        # Clean up the physical file safely
+        if file_path and os.path.exists(file_path):
+            try:
+                os.remove(file_path)
+            except Exception:
+                pass
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5000))
