@@ -4,10 +4,12 @@ import numpy as np
 import pickle
 import os
 
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 app = Flask(__name__)
 CORS(app)
 
-UPLOAD_FOLDER = "uploads"
+UPLOAD_FOLDER = os.path.join(BASE_DIR, "uploads")
+ACTORS_FOLDER = os.path.join(BASE_DIR, "actors")
 
 movies_data = {
 
@@ -422,7 +424,9 @@ movies_data = {
     ]
 }
 
-with open("embeddings.pkl", "rb") as f:
+EMBEDDINGS_PATH = os.path.join(BASE_DIR, "embeddings.pkl")
+
+with open(EMBEDDINGS_PATH, "rb") as f:
     actor_embeddings = pickle.load(f)
 
 @app.route("/")
