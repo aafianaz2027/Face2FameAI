@@ -445,49 +445,34 @@ def get_actor_image(filename):
 
 @app.route("/upload", methods=["POST"])
 def upload():
+    try:
+        print("UPLOAD HIT")
 
-    file = request.files["image"]
+        file = request.files["image"]
 
-    image_path = os.path.join(
-        UPLOAD_FOLDER,
-        file.filename
-    )
+        file_path = "temp.jpg"
+        file.save(file_path)
 
-    file.save(image_path)
+        print("File saved:", file_path)
 
-    user_embedding = DeepFace.represent(
-        img_path=image_path,
-        model_name="Facenet",
-        enforce_detection=False
-    )[0]["embedding"]
-
-    best_match = "No Match Found"
-    best_distance = 9999
-
-    for actor in actor_embeddings:
-
-        actor_embedding = actor["embedding"]
-
-        distance = np.linalg.norm(
-            np.array(user_embedding) -
-            np.array(actor_embedding)
+        # SAFE DeepFace call
+        result = DeepFace.analyze(
+            img_path=file_path,
+            enforce_detection=False
         )
 
-        if distance < best_distance:
-            best_distance = distance
-            best_match = actor["actor"]
+        return jsonify({
+            "success": True,
+            "result": result
+        })
 
-            if best_match is None:
-                return jsonify({
-                "error": "No face match found"
-                }), 400
+    except Exception as e:
+        print("ERROR IN UPLOAD:", str(e))
 
-    return jsonify({
-    "match": best_match,
-    "distance": float(best_distance),
-    "celebrity_image": f"{request.host_url}actors/{best_match}.jfif",
-    "movies": movies_data.get(best_match, [])
-})
+        return jsonify({
+            "success": False,
+            "error": str(e)
+        }), 500
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5000))
