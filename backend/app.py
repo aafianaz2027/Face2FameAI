@@ -430,8 +430,6 @@ EMBEDDINGS_PATH = os.path.join(BASE_DIR, "embeddings.pkl")
 with open(EMBEDDINGS_PATH, "rb") as f:
     actor_embeddings = pickle.load(f)
 
-DeepFace.build_model("Facenet")
-
 @app.route("/")
 def home():
     return "Face2FameAI Backend Running"
