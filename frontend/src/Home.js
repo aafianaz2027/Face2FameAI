@@ -28,7 +28,7 @@ export default function Home() {
       try {
 
         const response = await fetch(
-          "http://127.0.0.1:5000/upload",
+          "https://face2fameai.onrender.com/upload",
           {
             method: "POST",
             body: formData
@@ -43,10 +43,10 @@ export default function Home() {
 
         navigate("/result", {
           state: {
-          match: data.match,
-          distance: data.distance,
-          image: data.celebrity_image,
-          movies: data.movies
+            match: data.match,
+            distance: data.distance,
+            image: data.celebrity_image,
+            movies: data.movies
           }
         });
 
