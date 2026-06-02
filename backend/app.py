@@ -4,10 +4,9 @@ from deepface import DeepFace
 import numpy as np
 import pickle
 import os
-import cv2  # Added for image resizing
-import gc   # Added for garbage collection
+import cv2
+import gc  
 
-# Set TensorFlow to use minimal memory and suppress logging logs
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3' 
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -17,10 +16,8 @@ CORS(app)
 UPLOAD_FOLDER = os.path.join(BASE_DIR, "uploads")
 ACTORS_FOLDER = os.path.join(BASE_DIR, "actors")
 
-# Create folders if they do not exist
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
-# ... (Keeping your movies_data dictionary exactly as it is) ...
 movies_data = {
 
     "Aamir Khan": [
@@ -458,16 +455,12 @@ def upload():
 
         file = request.files["image"]
         
-        # Save securely using a dynamic or clear name inside UPLOAD_FOLDER
         file_path = os.path.join(UPLOAD_FOLDER, "temp_upload.jpg")
         file.save(file_path)
 
-        # -------------------------------------------------------------
-        # MEMORY FIX 1: Downscale the image immediately before processing
-        # -------------------------------------------------------------
         img = cv2.imread(file_path)
         if img is not None:
-            # Resize image so the maximum width/height is 640px (drastically cuts RAM usage)
+
             h, w = img.shape[:2]
             max_size = 640
             if max(h, w) > max_size:
@@ -477,13 +470,10 @@ def upload():
         
         print("File saved and resized:", file_path)
 
-        # -------------------------------------------------------------
-        # MEMORY FIX 2: Explicitly use lightweight configurations
-        # -------------------------------------------------------------
         result = DeepFace.analyze(
             img_path=file_path,
-            actions=['emotion'], # Explicitly state actions to avoid loading unnecessary models like age/gender
-            detector_backend='opencv', # Low footprint, very fast face detector
+            actions=['emotion'], 
+            detector_backend='opencv', 
             enforce_detection=False
         )
 
@@ -500,18 +490,15 @@ def upload():
         }), 500
 
     finally:
-        # -------------------------------------------------------------
-        # MEMORY FIX 3: Clear framework cache and force Garbage Collection
-        # -------------------------------------------------------------
+
         try:
             from tensorflow.keras import backend as K
-            K.clear_session() # Frees up Keras graph allocations
+            K.clear_session() 
         except Exception:
             pass
         
-        gc.collect() # Forces Python to instantly release unused memory
+        gc.collect() 
 
-        # Clean up the physical file safely
         if file_path and os.path.exists(file_path):
             try:
                 os.remove(file_path)
