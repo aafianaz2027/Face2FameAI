@@ -1,10 +1,10 @@
-# Face2FameAI 🎭
+# Face2FameAI 
 
 A web app where users can discover movies based on their celebrity lookalike.
 
 
 
-## ✨ About
+##  About
 
 Face2FameAI is an AI-powered celebrity lookalike web application built using React, Flask, and DeepFace.
 
@@ -16,7 +16,7 @@ Users can upload their photo and the app:
 
 
 
-## 🚀 Features
+##  Features
 
 - Face recognition using DeepFace
 - Celebrity similarity matching
@@ -28,7 +28,7 @@ Users can upload their photo and the app:
 
 
 
-## 🛠️ Tech Stack
+##  Tech Stack
 
 ### Frontend
 - React.js
@@ -43,7 +43,7 @@ Users can upload their photo and the app:
 
 
 
-## ⚙️ How It Works
+##  How It Works
 
 1. User uploads an image
 2. Flask backend receives image
@@ -54,7 +54,7 @@ Users can upload their photo and the app:
 
 
 
-## 📂 Project Structure
+##  Project Structure
 
 ```text
 face2fameai/
@@ -76,7 +76,7 @@ face2fameai/
 
 
 
-## 🔧 Installation
+##  Installation
 
 ### Backend Setup
 
@@ -108,7 +108,7 @@ npm start
 ```
 
 
-## 🌟 Future Improvements
+##  Future Improvements
 
 - Top 3 celebrity matches
 - Movie posters
@@ -119,7 +119,7 @@ npm start
 
 
 
-## 👨‍💻 Author
+##  Author
 
 Built by Aafia Naz
 
