@@ -466,7 +466,7 @@ def upload():
             if max(h, w) > max_size:
                 scale = max_size / max(h, w)
                 img = cv2.resize(img, (int(w * scale), int(h * scale)), interpolation=cv2.INTER_AREA)
-                cv2.imwrite(file_path, img) # Overwrite with the small version
+                cv2.imwrite(file_path, img)
         
         print("File saved and resized:", file_path)
 
