@@ -121,7 +121,7 @@ npm start
 
 ##  Author
 
-Built by Aafia Naz
+Built by me
 
 GitHub:
 https://github.com/aafianaz2027
