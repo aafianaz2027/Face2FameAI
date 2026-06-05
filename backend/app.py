@@ -1,26 +1,24 @@
 from flask import Flask, request, jsonify, send_from_directory
 from flask_cors import CORS
+import os
+
+os.environ["TF_CPP_MIN_LOG_LEVEL"] = "3"
+
 from deepface import DeepFace
+import cv2
+import gc
 import numpy as np
 import pickle
-import os
-import cv2  # Added for image resizing
-import gc   # Added for garbage collection
-
-# Set TensorFlow to use minimal memory and suppress logging logs
-os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3' 
+import tempfile
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 app = Flask(__name__)
 CORS(app)
+app.config["MAX_CONTENT_LENGTH"] = 5 * 1024 * 1024
 
 UPLOAD_FOLDER = os.path.join(BASE_DIR, "uploads")
 ACTORS_FOLDER = os.path.join(BASE_DIR, "actors")
 
-# Create folders if they do not exist
-os.makedirs(UPLOAD_FOLDER, exist_ok=True)
-
-# ... (Keeping your movies_data dictionary exactly as it is) ...
 movies_data = {
 
     "Aamir Khan": [
@@ -439,84 +437,131 @@ EMBEDDINGS_PATH = os.path.join(BASE_DIR, "embeddings.pkl")
 with open(EMBEDDINGS_PATH, "rb") as f:
     actor_embeddings = pickle.load(f)
 
+def get_actor_movies(actor_name):
+    if actor_name in movies_data:
+        return movies_data[actor_name]
+
+    actor_key = actor_name.casefold()
+
+    for name, movies in movies_data.items():
+        if name.casefold() == actor_key:
+            return movies
+
+    return []
+
 @app.route("/")
 def home():
     return "Face2FameAI Backend Running"
 
 @app.route("/actors/<filename>")
+@app.route("/api/actors/<filename>")
 def get_actor_image(filename):
-    return send_from_directory("actors", filename)
+
+    return send_from_directory(
+        ACTORS_FOLDER,
+        filename
+    )
 
 @app.route("/upload", methods=["POST"])
+@app.route("/api/upload", methods=["POST"])
 def upload():
     file_path = None
+
     try:
         print("UPLOAD HIT")
 
-        if "image" not in request.files:
-            return jsonify({"success": False, "error": "No image uploaded"}), 400
+        file = request.files.get("image")
 
-        file = request.files["image"]
-        
-        # Save securely using a dynamic or clear name inside UPLOAD_FOLDER
-        file_path = os.path.join(UPLOAD_FOLDER, "temp_upload.jpg")
+        if file is None:
+            return jsonify({
+                "success": False,
+                "error": "No image uploaded"
+            }), 400
+
+        temp_file = tempfile.NamedTemporaryFile(
+            suffix=".jpg",
+            delete=False,
+            dir=tempfile.gettempdir()
+        )
+
+        file_path = temp_file.name
+        temp_file.close()
         file.save(file_path)
 
-        # -------------------------------------------------------------
-        # MEMORY FIX 1: Downscale the image immediately before processing
-        # -------------------------------------------------------------
         img = cv2.imread(file_path)
         if img is not None:
-            # Resize image so the maximum width/height is 640px (drastically cuts RAM usage)
-            h, w = img.shape[:2]
+            height, width = img.shape[:2]
             max_size = 640
-            if max(h, w) > max_size:
-                scale = max_size / max(h, w)
-                img = cv2.resize(img, (int(w * scale), int(h * scale)), interpolation=cv2.INTER_AREA)
-                cv2.imwrite(file_path, img) # Overwrite with the small version
-        
-        print("File saved and resized:", file_path)
 
-        # -------------------------------------------------------------
-        # MEMORY FIX 2: Explicitly use lightweight configurations
-        # -------------------------------------------------------------
-        result = DeepFace.analyze(
+            if max(height, width) > max_size:
+                scale = max_size / max(height, width)
+                img = cv2.resize(
+                    img,
+                    (int(width * scale), int(height * scale)),
+                    interpolation=cv2.INTER_AREA
+                )
+
+            cv2.imwrite(
+                file_path,
+                img,
+                [int(cv2.IMWRITE_JPEG_QUALITY), 75]
+            )
+
+        print("File saved and compressed:", file_path)
+
+        user_embedding = DeepFace.represent(
             img_path=file_path,
-            actions=['emotion'], # Explicitly state actions to avoid loading unnecessary models like age/gender
-            detector_backend='opencv', # Low footprint, very fast face detector
+            model_name="Facenet",
             enforce_detection=False
+        )[0]["embedding"]
+
+        best_match = None
+        best_distance = float("inf")
+        user_vector = np.array(user_embedding)
+
+        for actor in actor_embeddings:
+            actor_vector = np.array(actor["embedding"])
+            distance = np.linalg.norm(user_vector - actor_vector)
+
+            if distance < best_distance:
+                best_distance = distance
+                best_match = actor["actor"]
+
+        actor_filename = next(
+            (
+                filename for filename in os.listdir(ACTORS_FOLDER)
+                if os.path.splitext(filename)[0] == best_match
+            ),
+            None
         )
 
         return jsonify({
             "success": True,
-            "result": result
+            "match": best_match,
+            "distance": round(float(best_distance), 4),
+            "celebrity_image": f"/api/actors/{actor_filename}" if actor_filename else None,
+            "movies": get_actor_movies(best_match) if best_match else []
         })
 
     except Exception as e:
         print("ERROR IN UPLOAD:", str(e))
+
         return jsonify({
             "success": False,
             "error": str(e)
         }), 500
 
     finally:
-        # -------------------------------------------------------------
-        # MEMORY FIX 3: Clear framework cache and force Garbage Collection
-        # -------------------------------------------------------------
         try:
             from tensorflow.keras import backend as K
-            K.clear_session() # Frees up Keras graph allocations
+            K.clear_session()
         except Exception:
             pass
-        
-        gc.collect() # Forces Python to instantly release unused memory
 
-        # Clean up the physical file safely
+        gc.collect()
+
         if file_path and os.path.exists(file_path):
-            try:
-                os.remove(file_path)
-            except Exception:
-                pass
+            os.remove(file_path)
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5000))

@@ -11,6 +11,55 @@ export default function Home() {
 
   const [image, setImage] = useState(null);
 
+  const compressImage = (file, maxSize = 1024, quality = 0.75) => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+
+      reader.onload = () => {
+        const img = new Image();
+
+        img.onload = () => {
+          const scale = Math.min(
+            1,
+            maxSize / Math.max(img.width, img.height)
+          );
+
+          const canvas = document.createElement("canvas");
+          canvas.width = Math.round(img.width * scale);
+          canvas.height = Math.round(img.height * scale);
+
+          const ctx = canvas.getContext("2d");
+          ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+
+          canvas.toBlob(
+            (blob) => {
+              if (!blob) {
+                reject(new Error("Could not compress image"));
+                return;
+              }
+
+              resolve(
+                new File(
+                  [blob],
+                  file.name.replace(/\.[^.]+$/, ".jpg"),
+                  { type: "image/jpeg" }
+                )
+              );
+            },
+            "image/jpeg",
+            quality
+          );
+        };
+
+        img.onerror = reject;
+        img.src = reader.result;
+      };
+
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    });
+  };
+
   const handleFileChange = async (event) => {
 
     const file = event.target.files[0];
@@ -19,16 +68,18 @@ export default function Home() {
 
       setLoading(true);
 
-      setImage(URL.createObjectURL(file));
-
-      const formData = new FormData();
-
-      formData.append("image", file);
-
       try {
 
+        const compressedFile = await compressImage(file);
+
+        setImage(URL.createObjectURL(compressedFile));
+
+        const formData = new FormData();
+
+        formData.append("image", compressedFile);
+
         const response = await fetch(
-          "https://face2fameai.onrender.com/upload",
+          "/api/upload",
           {
             method: "POST",
             body: formData
@@ -83,6 +134,7 @@ export default function Home() {
 
         <input
           type="file"
+          accept="image/*"
           hidden
           onChange={handleFileChange}
         />
